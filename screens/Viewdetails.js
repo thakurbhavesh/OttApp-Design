@@ -6,13 +6,13 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Dimensions,
   FlatList,
   ActivityIndicator,
   Modal,
   Pressable,
   StatusBar,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -60,11 +60,20 @@ export default function ViewDetails() {
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isWatchlisted, setIsWatchlisted] = useState(false);
+  const [expandedEpisodes, setExpandedEpisodes] = useState({}); // State to track expanded descriptions
   const videoRef = useRef(null);
   const defaultCastImage = "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg";
 
   const stripHtml = (html) => {
     return html ? html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() : "No description available";
+  };
+
+  const isValidVideoUrl = (url) => {
+    return url && url !== "A" && url.trim() !== "" && url.startsWith("http");
+  };
+
+  const isPlayableEpisode = (episode) => {
+    return episode && isValidVideoUrl(episode.video_url);
   };
 
   const fetchContent = async () => {
@@ -138,7 +147,7 @@ export default function ViewDetails() {
   };
 
   const playVideo = async (videoUrl) => {
-    if (!videoUrl || videoUrl === "A" || !videoUrl.startsWith("http")) {
+    if (!isValidVideoUrl(videoUrl)) {
       console.warn("Invalid video URL:", videoUrl);
       setError("Invalid video URL. Please check the content settings.");
       return;
@@ -164,8 +173,22 @@ export default function ViewDetails() {
     }
   };
 
+  const toggleEpisodeDescription = (episodeId) => {
+    setExpandedEpisodes((prev) => ({
+      ...prev,
+      [episodeId]: !prev[episodeId],
+    }));
+  };
+
   const renderEpisode = ({ item }) => {
-    if (item.season_number === 0 && item.episode_number === 0) return null;
+    if (!isPlayableEpisode(item)) {
+      return null;
+    }
+
+    const isExpanded = expandedEpisodes[item.id];
+    const description = stripHtml(item.description);
+    const isLongDescription = description.length > 100; // Adjust threshold as needed
+
     return (
       <TouchableOpacity
         style={styles.episodeCard}
@@ -187,18 +210,33 @@ export default function ViewDetails() {
           </View>
         </View>
         <View style={styles.episodeInfo}>
-          <Text style={styles.episodeNumber}>
-            S{item.season_number} E{item.episode_number}
-          </Text>
+          {(item.season_number > 0 || item.episode_number > 0) && (
+            <Text style={styles.episodeNumber}>
+              S{item.season_number} E{item.episode_number}
+            </Text>
+          )}
           <Text style={styles.episodeTitle} numberOfLines={2}>
             {item.title}
           </Text>
           <Text style={styles.episodeDuration}>
             {item.length ? `${item.length} min` : "Unknown"}
           </Text>
-          <Text style={styles.episodeDescription} numberOfLines={3}>
-            {stripHtml(item.description)}
+          <Text
+            style={styles.episodeDescription}
+            numberOfLines={isExpanded ? undefined : 3}
+          >
+            {description}
           </Text>
+          {isLongDescription && (
+            <TouchableOpacity
+              onPress={() => toggleEpisodeDescription(item.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.readMore}>
+                {isExpanded ? "Read Less" : "Read More"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -228,10 +266,354 @@ export default function ViewDetails() {
     </View>
   );
 
-  const hasValidEpisodes = content.manage_selected.some(
-    (episode) => episode.season_number !== 0 || episode.episode_number !== 0
-  );
+  const hasPlayableEpisodes = content.manage_selected.some(episode => isPlayableEpisode(episode));
   const hasCastCrew = content.cast_crew.length > 0;
+
+  const sections = [
+    { type: 'hero', data: {} },
+    { type: 'action', data: {} },
+    { type: 'description', data: {} },
+    { type: 'infoGrid', data: {} },
+    ...(hasPlayableEpisodes || hasCastCrew ? [{ type: 'tabs', data: {} }] : []),
+  ];
+
+  const renderSection = ({ item }) => {
+    switch (item.type) {
+      case 'hero':
+        return (
+          <View style={styles.heroSection}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                setShowVideo(false);
+                setPaused(true);
+                if (videoRef.current) {
+                  videoRef.current.stopAsync();
+                }
+                navigation.goBack();
+              }}
+              activeOpacity={0.8}
+            >
+              <BlurView intensity={20} style={styles.backButtonBlur}>
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </BlurView>
+            </TouchableOpacity>
+
+            <View style={styles.posterWrapper}>
+              {showVideo && currentVideoUrl ? (
+                <View style={styles.videoContainer}>
+                  <Video
+                    ref={videoRef}
+                    source={{ uri: currentVideoUrl }}
+                    style={styles.video}
+                    useNativeControls
+                    isLooping={false}
+                    resizeMode="contain"
+                    onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                    onError={(e) => {
+                      console.log("Video error:", e);
+                      setError("Failed to load video");
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={[styles.playOverlay, { opacity: paused ? 1 : 0 }]}
+                    onPress={() => {
+                      setPaused(!paused);
+                      if (videoRef.current) {
+                        paused ? videoRef.current.playAsync() : videoRef.current.pauseAsync();
+                      }
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={['#e50914', '#b20710']}
+                      style={styles.playOverlayGradient}
+                    >
+                      <Ionicons
+                        name={paused ? "play" : "pause"}
+                        size={32}
+                        color="#fff"
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  <View style={styles.speedControls}>
+                    {[0.5, 1.0, 1.5, 2.0].map((rate) => (
+                      <TouchableOpacity 
+                        key={rate}
+                        onPress={() => changePlaybackRate(rate)}
+                        style={[
+                          styles.speedButton,
+                          playbackRate === rate && styles.activeSpeedButton
+                        ]}
+                      >
+                        <Text style={[
+                          styles.speedButtonText,
+                          playbackRate === rate && styles.activeSpeedButtonText
+                        ]}>
+                          {rate}x
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.posterContainer}>
+                  <Image
+                    source={{ uri: content.image }}
+                    style={styles.poster}
+                    resizeMode="contain"
+                  />
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.8)']}
+                    style={styles.posterGradient}
+                  />
+                </View>
+              )}
+            </View>
+
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.9)', '#000']}
+              style={styles.contentOverlay}
+            >
+              <Text style={styles.title}>{content.title}</Text>
+              <View style={styles.metaInfo}>
+                <View style={styles.badges}>
+                  <View style={styles.rating}>
+                    <Ionicons name="star" size={14} color="#FFD700" />
+                    <Text style={styles.ratingText}>8.5</Text>
+                  </View>
+                  <View style={styles.yearBadge}>
+                    <Text style={styles.yearText}>2024</Text>
+                  </View>
+                  <View style={styles.ageBadge}>
+                    <Text style={styles.ageText}>{content.preference_name}</Text>
+                  </View>
+                  {content.plan === "paid" && (
+                    <View style={styles.premiumBadge}>
+                      <Ionicons name="diamond" size={12} color="#FFD700" />
+                      <Text style={styles.premiumText}>Premium</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.subtitle}>
+                  {content.main_category_name} • {content.language_name} • {content.duration}
+                </Text>
+              </View>
+            </LinearGradient>
+          </View>
+        );
+
+      case 'action':
+        const firstPlayableEpisode = content.manage_selected.find(episode => isPlayableEpisode(episode));
+        return (
+          <View style={styles.actionSection}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.playButton,
+                {
+                  opacity:
+                    content.main_category_name === "Webseries" || hasPlayableEpisodes
+                      ? firstPlayableEpisode
+                        ? pressed ? 0.8 : 1
+                        : 0.5
+                      : isValidVideoUrl(content.video_url)
+                      ? pressed ? 0.8 : 1
+                      : 0.5,
+                },
+              ]}
+              onPress={() => {
+                const videoToPlay = (content.main_category_name === "Webseries" || hasPlayableEpisodes) 
+                  ? firstPlayableEpisode?.video_url 
+                  : content.video_url;
+                playVideo(videoToPlay);
+              }}
+              disabled={
+                (content.main_category_name === "Webseries" || hasPlayableEpisodes)
+                  ? !firstPlayableEpisode
+                  : !isValidVideoUrl(content.video_url)
+              }
+            >
+              <LinearGradient
+                colors={['#e50914', '#b20710']}
+                style={styles.playButtonGradient}
+              >
+                <Ionicons name="play" size={20} color="#fff" />
+                <Text style={styles.playButtonText}>Play</Text>
+              </LinearGradient>
+            </Pressable>
+
+            {content.trailer_url && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.trailerButton,
+                  { opacity: pressed ? 0.8 : 1 },
+                ]}
+                onPress={() => playVideo(content.trailer_url)}
+              >
+                <View style={styles.trailerButtonInner}>
+                  <Ionicons name="play-outline" size={20} color="#fff" />
+                  <Text style={styles.trailerButtonText}>Trailer</Text>
+                </View>
+              </Pressable>
+            )}
+
+            <View style={styles.secondaryActions}>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => setIsWatchlisted(!isWatchlisted)}
+                activeOpacity={0.8}
+              >
+                <Ionicons 
+                  name={isWatchlisted ? "checkmark-circle" : "add-circle-outline"} 
+                  size={24} 
+                  color={isWatchlisted ? "#e50914" : "#fff"} 
+                />
+                <Text style={styles.actionText}>
+                  {isWatchlisted ? "Added" : "Watchlist"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => setIsLiked(!isLiked)}
+                activeOpacity={0.8}
+              >
+                <Ionicons 
+                  name={isLiked ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={isLiked ? "#e50914" : "#fff"} 
+                />
+                <Text style={styles.actionText}>
+                  {isLiked ? "Liked" : "Like"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
+                <Ionicons name="share-social-outline" size={24} color="#fff" />
+                <Text style={styles.actionText}>Share</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
+                <Ionicons name="download-outline" size={24} color="#fff" />
+                <Text style={styles.actionText}>Download</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+
+      case 'description':
+        return (
+          <View style={styles.descriptionSection}>
+            <Text style={styles.description} numberOfLines={3}>
+              {content.description}
+            </Text>
+            <TouchableOpacity 
+              onPress={() => setShowDescriptionModal(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.readMore}>Read more</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
+      case 'infoGrid':
+        return (
+          <View style={styles.infoGrid}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Genre</Text>
+              <Text style={styles.infoValue}>{content.category_name}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Language</Text>
+              <Text style={styles.infoValue}>{content.language_name}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Industry</Text>
+              <Text style={styles.infoValue}>{content.industry}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Release</Text>
+              <Text style={styles.infoValue}>{content.release_date}</Text>
+            </View>
+          </View>
+        );
+
+      case 'tabs':
+        return (
+          <View style={styles.tabSection}>
+            <View style={styles.tabBar}>
+              {hasPlayableEpisodes && (
+                <TouchableOpacity
+                  style={[styles.tabButton, currentTab === "episodes" && styles.activeTab]}
+                  onPress={() => setCurrentTab("episodes")}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      currentTab === "episodes" && styles.activeTabText,
+                    ]}
+                  >
+                    Episodes
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {hasCastCrew && (
+                <TouchableOpacity
+                  style={[styles.tabButton, currentTab === "info" && styles.activeTab]}
+                  onPress={() => setCurrentTab("info")}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[styles.tabText, currentTab === "info" && styles.activeTabText]}
+                  >
+                    Cast & Crew
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {currentTab === "episodes" && hasPlayableEpisodes ? (
+              <View style={styles.episodeSection}>
+                <FlatList
+                  data={content.manage_selected}
+                  renderItem={renderEpisode}
+                  keyExtractor={(item) => item.id.toString()}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.episodeList}
+                />
+              </View>
+            ) : currentTab === "episodes" && content.main_category_name === "Webseries" ? (
+              <View style={styles.noDataContainer}>
+                <Ionicons name="film-outline" size={48} color="#666" />
+                <Text style={styles.noDataText}>No episodes available</Text>
+              </View>
+            ) : null}
+
+            {currentTab === "info" && hasCastCrew ? (
+              <View style={styles.castSection}>
+                <FlatList
+                  data={content.cast_crew}
+                  renderItem={renderCastCrew}
+                  keyExtractor={(item, index) => index.toString()}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.castList}
+                />
+              </View>
+            ) : currentTab === "info" ? (
+              <View style={styles.noDataContainer}>
+                <Ionicons name="people-outline" size={48} color="#666" />
+                <Text style={styles.noDataText}>No cast information available</Text>
+              </View>
+            ) : null}
+          </View>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   if (loadingContent) {
     return (
@@ -280,429 +662,92 @@ export default function ViewDetails() {
     );
   }
 
-  const firstValidEpisode = content.manage_selected.find(
-    (episode) => episode.season_number !== 0 || episode.episode_number !== 0
-  ) || content.manage_selected[0];
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
+      <FlatList
+        data={sections}
+        renderItem={renderSection}
+        keyExtractor={(item, index) => `${item.type}-${index}`}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      />
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showDescriptionModal}
+        onRequestClose={() => setShowDescriptionModal(false)}
       >
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              setShowVideo(false);
-              setPaused(true);
-              if (videoRef.current) {
-                videoRef.current.stopAsync();
-              }
-              navigation.goBack();
-            }}
-            activeOpacity={0.8}
-          >
-            <BlurView intensity={20} style={styles.backButtonBlur}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </BlurView>
-          </TouchableOpacity>
-
-          <View style={styles.posterWrapper}>
-            {showVideo && currentVideoUrl ? (
-              <View style={styles.videoContainer}>
-                <Video
-                  ref={videoRef}
-                  source={{ uri: currentVideoUrl }}
-                  style={styles.video}
-                  useNativeControls
-                  isLooping={false}
-                  resizeMode="contain"
-                  onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-                  onError={(e) => {
-                    console.log("Video error:", e);
-                    setError("Failed to load video");
-                  }}
-                />
-                <TouchableOpacity
-                  style={[styles.playOverlay, { opacity: paused ? 1 : 0 }]}
-                  onPress={() => {
-                    setPaused(!paused);
-                    if (videoRef.current) {
-                      paused ? videoRef.current.playAsync() : videoRef.current.pauseAsync();
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    colors={['#e50914', '#b20710']}
-                    style={styles.playOverlayGradient}
-                  >
-                    <Ionicons
-                      name={paused ? "play" : "pause"}
-                      size={32}
-                      color="#fff"
-                    />
-                  </LinearGradient>
-                </TouchableOpacity>
-                <View style={styles.speedControls}>
-                  {[0.5, 1.0, 1.5, 2.0].map((rate) => (
-                    <TouchableOpacity 
-                      key={rate}
-                      onPress={() => changePlaybackRate(rate)}
-                      style={[
-                        styles.speedButton,
-                        playbackRate === rate && styles.activeSpeedButton
-                      ]}
-                    >
-                      <Text style={[
-                        styles.speedButtonText,
-                        playbackRate === rate && styles.activeSpeedButtonText
-                      ]}>
-                        {rate}x
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+        <View style={styles.modalContainer}>
+          <BlurView intensity={20} style={styles.modalBlur}>
+            <View style={styles.modalContent}>
+              <TouchableOpacity
+                style={styles.closeModalButton}
+                onPress={() => setShowDescriptionModal(false)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+              
+              <Image
+                source={{ uri: content.image }}
+                style={styles.modalPoster}
+                resizeMode="cover"
+              />
+              
+              <Text style={styles.modalTitle}>{content.title}</Text>
+              <Text style={styles.modalSubtitle}>
+                {content.main_category_name} • {content.category_name}
+              </Text>
+              
+              <ScrollView style={styles.modalScrollView}>
+                <Text style={styles.modalDescription}>{content.description}</Text>
+                
+                <View style={styles.modalInfoGrid}>
+                  <View style={styles.modalInfoItem}>
+                    <Text style={styles.modalInfoLabel}>Language</Text>
+                    <Text style={styles.modalInfoValue}>{content.language_name}</Text>
+                  </View>
+                  <View style={styles.modalInfoItem}>
+                    <Text style={styles.modalInfoLabel}>Industry</Text>
+                    <Text style={styles.modalInfoValue}>{content.industry}</Text>
+                  </View>
+                  <View style={styles.modalInfoItem}>
+                    <Text style={styles.modalInfoLabel}>Release Date</Text>
+                    <Text style={styles.modalInfoValue}>{content.release_date}</Text>
+                  </View>
+                  <View style={styles.modalInfoItem}>
+                    <Text style={styles.modalInfoLabel}>Duration</Text>
+                    <Text style={styles.modalInfoValue}>{content.duration}</Text>
+                  </View>
                 </View>
-              </View>
-            ) : (
-              <View style={styles.posterContainer}>
-                <Image
-                  source={{ uri: content.image }}
-                  style={styles.poster}
-                  resizeMode="cover"
-                />
+              </ScrollView>
+              
+              <Pressable
+                style={({ pressed }) => [
+                  styles.modalPlayButton,
+                  { opacity: pressed ? 0.8 : 1 },
+                ]}
+                onPress={() => {
+                  setShowDescriptionModal(false);
+                  const videoToPlay = (content.main_category_name === "Webseries" || hasPlayableEpisodes) 
+                    ? content.manage_selected.find(episode => isPlayableEpisode(episode))?.video_url 
+                    : content.video_url;
+                  playVideo(videoToPlay);
+                }}
+              >
                 <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.8)']}
-                  style={styles.posterGradient}
-                />
-              </View>
-            )}
-          </View>
-
-          {/* Content Info Overlay */}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.9)', '#000']}
-            style={styles.contentOverlay}
-          >
-            <Text style={styles.title}>{content.title}</Text>
-            <View style={styles.metaInfo}>
-              <View style={styles.badges}>
-                <View style={styles.rating}>
-                  <Ionicons name="star" size={14} color="#FFD700" />
-                  <Text style={styles.ratingText}>8.5</Text>
-                </View>
-                <View style={styles.yearBadge}>
-                  <Text style={styles.yearText}>2024</Text>
-                </View>
-                <View style={styles.ageBadge}>
-                  <Text style={styles.ageText}>{content.preference_name}</Text>
-                </View>
-                {content.plan === "paid" && (
-                  <View style={styles.premiumBadge}>
-                    <Ionicons name="diamond" size={12} color="#FFD700" />
-                    <Text style={styles.premiumText}>Premium</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.subtitle}>
-                {content.main_category_name} • {content.language_name} • {content.duration}
-              </Text>
+                  colors={['#e50914', '#b20710']}
+                  style={styles.modalPlayButtonGradient}
+                >
+                  <Ionicons name="play" size={20} color="#fff" />
+                  <Text style={styles.modalPlayButtonText}>Play Now</Text>
+                </LinearGradient>
+              </Pressable>
             </View>
-          </LinearGradient>
+          </BlurView>
         </View>
-
-        {/* Action Buttons */}
-        <View style={styles.actionSection}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.playButton,
-              {
-                opacity:
-                  content.main_category_name === "Webseries"
-                    ? firstValidEpisode?.video_url &&
-                      firstValidEpisode.video_url !== "A" &&
-                      firstValidEpisode.video_url.startsWith("http")
-                      ? pressed ? 0.8 : 1
-                      : 0.5
-                    : content.video_url &&
-                      content.video_url !== "A" &&
-                      content.video_url.startsWith("http")
-                    ? pressed ? 0.8 : 1
-                    : 0.5,
-              },
-            ]}
-            onPress={() =>
-              playVideo(
-                content.main_category_name === "Webseries"
-                  ? firstValidEpisode?.video_url
-                  : content.video_url
-              )
-            }
-            disabled={
-              content.main_category_name === "Webseries"
-                ? !firstValidEpisode?.video_url ||
-                  firstValidEpisode.video_url === "A" ||
-                  !firstValidEpisode.video_url.startsWith("http")
-                : !content.video_url ||
-                  content.video_url === "A" ||
-                  !content.video_url.startsWith("http")
-            }
-          >
-            <LinearGradient
-              colors={['#e50914', '#b20710']}
-              style={styles.playButtonGradient}
-            >
-              <Ionicons name="play" size={20} color="#fff" />
-              <Text style={styles.playButtonText}>Play</Text>
-            </LinearGradient>
-          </Pressable>
-
-          {content.trailer_url && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.trailerButton,
-                { opacity: pressed ? 0.8 : 1 },
-              ]}
-              onPress={() => playVideo(content.trailer_url)}
-            >
-              <View style={styles.trailerButtonInner}>
-                <Ionicons name="play-outline" size={20} color="#fff" />
-                <Text style={styles.trailerButtonText}>Trailer</Text>
-              </View>
-            </Pressable>
-          )}
-
-          <View style={styles.secondaryActions}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => setIsWatchlisted(!isWatchlisted)}
-              activeOpacity={0.8}
-            >
-              <Ionicons 
-                name={isWatchlisted ? "checkmark-circle" : "add-circle-outline"} 
-                size={24} 
-                color={isWatchlisted ? "#e50914" : "#fff"} 
-              />
-              <Text style={styles.actionText}>
-                {isWatchlisted ? "Added" : "Watchlist"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => setIsLiked(!isLiked)}
-              activeOpacity={0.8}
-            >
-              <Ionicons 
-                name={isLiked ? "heart" : "heart-outline"} 
-                size={24} 
-                color={isLiked ? "#e50914" : "#fff"} 
-              />
-              <Text style={styles.actionText}>
-                {isLiked ? "Liked" : "Like"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
-              <Ionicons name="share-social-outline" size={24} color="#fff" />
-              <Text style={styles.actionText}>Share</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
-              <Ionicons name="download-outline" size={24} color="#fff" />
-              <Text style={styles.actionText}>Download</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Description */}
-        <View style={styles.descriptionSection}>
-          <Text style={styles.description} numberOfLines={3}>
-            {content.description}
-          </Text>
-          <TouchableOpacity 
-            onPress={() => setShowDescriptionModal(true)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.readMore}>Read more</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Additional Info */}
-        <View style={styles.infoGrid}>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Genre</Text>
-            <Text style={styles.infoValue}>{content.category_name}</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Language</Text>
-            <Text style={styles.infoValue}>{content.language_name}</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Industry</Text>
-            <Text style={styles.infoValue}>{content.industry}</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Release</Text>
-            <Text style={styles.infoValue}>{content.release_date}</Text>
-          </View>
-        </View>
-
-        {/* Tabs */}
-        {(hasValidEpisodes || hasCastCrew) && (
-          <View style={styles.tabSection}>
-            <View style={styles.tabBar}>
-              {hasValidEpisodes && (
-                <TouchableOpacity
-                  style={[styles.tabButton, currentTab === "episodes" && styles.activeTab]}
-                  onPress={() => setCurrentTab("episodes")}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[
-                      styles.tabText,
-                      currentTab === "episodes" && styles.activeTabText,
-                    ]}
-                  >
-                    Episodes
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {hasCastCrew && (
-                <TouchableOpacity
-                  style={[styles.tabButton, currentTab === "info" && styles.activeTab]}
-                  onPress={() => setCurrentTab("info")}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[styles.tabText, currentTab === "info" && styles.activeTabText]}
-                  >
-                    Cast & Crew
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Tab Content */}
-            {currentTab === "episodes" && hasValidEpisodes ? (
-              <View style={styles.episodeSection}>
-                <FlatList
-                  data={content.manage_selected}
-                  renderItem={renderEpisode}
-                  keyExtractor={(item) => item.id.toString()}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.episodeList}
-                />
-              </View>
-            ) : currentTab === "episodes" && content.main_category_name === "Webseries" ? (
-              <View style={styles.noDataContainer}>
-                <Ionicons name="film-outline" size={48} color="#666" />
-                <Text style={styles.noDataText}>No episodes available</Text>
-              </View>
-            ) : null}
-
-            {currentTab === "info" && hasCastCrew ? (
-              <View style={styles.castSection}>
-                <FlatList
-                  data={content.cast_crew}
-                  renderItem={renderCastCrew}
-                  keyExtractor={(item, index) => index.toString()}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.castList}
-                />
-              </View>
-            ) : currentTab === "info" ? (
-              <View style={styles.noDataContainer}>
-                <Ionicons name="people-outline" size={48} color="#666" />
-                <Text style={styles.noDataText}>No cast information available</Text>
-              </View>
-            ) : null}
-          </View>
-        )}
-
-        {/* Description Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={showDescriptionModal}
-          onRequestClose={() => setShowDescriptionModal(false)}
-        >
-          <View style={styles.modalContainer}>
-            <BlurView intensity={20} style={styles.modalBlur}>
-              <View style={styles.modalContent}>
-                <TouchableOpacity
-                  style={styles.closeModalButton}
-                  onPress={() => setShowDescriptionModal(false)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="close" size={24} color="#fff" />
-                </TouchableOpacity>
-                
-                <Image
-                  source={{ uri: content.image }}
-                  style={styles.modalPoster}
-                  resizeMode="cover"
-                />
-                
-                <Text style={styles.modalTitle}>{content.title}</Text>
-                <Text style={styles.modalSubtitle}>
-                  {content.main_category_name} • {content.category_name}
-                </Text>
-                
-                <ScrollView style={styles.modalScrollView}>
-                  <Text style={styles.modalDescription}>{content.description}</Text>
-                  
-                  <View style={styles.modalInfoGrid}>
-                    <View style={styles.modalInfoItem}>
-                      <Text style={styles.modalInfoLabel}>Language</Text>
-                      <Text style={styles.modalInfoValue}>{content.language_name}</Text>
-                    </View>
-                    <View style={styles.modalInfoItem}>
-                      <Text style={styles.modalInfoLabel}>Industry</Text>
-                      <Text style={styles.modalInfoValue}>{content.industry}</Text>
-                    </View>
-                    <View style={styles.modalInfoItem}>
-                      <Text style={styles.modalInfoLabel}>Release Date</Text>
-                      <Text style={styles.modalInfoValue}>{content.release_date}</Text>
-                    </View>
-                    <View style={styles.modalInfoItem}>
-                      <Text style={styles.modalInfoLabel}>Duration</Text>
-                      <Text style={styles.modalInfoValue}>{content.duration}</Text>
-                    </View>
-                  </View>
-                </ScrollView>
-                
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.modalPlayButton,
-                    { opacity: pressed ? 0.8 : 1 },
-                  ]}
-                  onPress={() => {
-                    setShowDescriptionModal(false);
-                    playVideo(
-                      content.main_category_name === "Webseries"
-                        ? firstValidEpisode?.video_url
-                        : content.video_url
-                    );
-                  }}
-                >
-                  <LinearGradient
-                    colors={['#e50914', '#b20710']}
-                    style={styles.modalPlayButtonGradient}
-                  >
-                    <Ionicons name="play" size={20} color="#fff" />
-                    <Text style={styles.modalPlayButtonText}>Play Now</Text>
-                  </LinearGradient>
-                </Pressable>
-              </View>
-            </BlurView>
-          </View>
-        </Modal>
-      </ScrollView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -774,7 +819,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   posterWrapper: {
-    width: width,
+    width: '100%',
     height: height * 0.6,
     position: 'relative',
   },
@@ -784,8 +829,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   poster: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
   },
   posterGradient: {
     position: 'absolute',
@@ -1117,6 +1163,7 @@ const styles = StyleSheet.create({
     color: "#ccc",
     fontSize: 12,
     lineHeight: 16,
+    marginBottom: 4, // Added margin for spacing before Read More
   },
 
   // Cast Section

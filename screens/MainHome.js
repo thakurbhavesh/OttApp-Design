@@ -77,7 +77,7 @@ export default function MainHome() {
         const nextIndex = (currentBannerIndex + 1) % bannerData.length;
         setCurrentBannerIndex(nextIndex);
         bannerRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-      }, 5000);
+      }, 6000); // Increased interval to 6s for smoother transitions
     }
 
     return () => {
@@ -209,6 +209,20 @@ export default function MainHome() {
     }
   }).current;
 
+  // getItemLayout for banner FlatList
+  const getBannerItemLayout = (data, index) => ({
+    length: width,
+    offset: width * index,
+    index,
+  });
+
+  // getItemLayout for section FlatList
+  const getSectionItemLayout = (data, index) => ({
+    length: 140 + 8, // card width (140) + margin (4 + 4)
+    offset: (140 + 8) * index,
+    index,
+  });
+
   // Create listData dynamically
   const listData = [];
 
@@ -287,6 +301,12 @@ export default function MainHome() {
             )}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+            getItemLayout={getBannerItemLayout}
+            initialNumToRender={2}
+            maxToRenderPerBatch={3}
+            windowSize={5}
+            removeClippedSubviews={true}
+            decelerationRate="fast"
           />
           
           <View style={styles.sliderOverlay}>
@@ -379,6 +399,12 @@ export default function MainHome() {
           )}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalListContent}
+          getItemLayout={getSectionItemLayout}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          removeClippedSubviews={true}
+          decelerationRate="fast"
         />
       </View>
     );
@@ -409,7 +435,7 @@ export default function MainHome() {
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
-            onPress={() => window.location.reload()}
+            onPress={() => window.location.reload()} // Note: window.location.reload is web-specific; use a different approach for mobile
           >
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
