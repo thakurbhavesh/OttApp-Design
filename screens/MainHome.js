@@ -310,7 +310,7 @@ export default function MainHome() {
           />
           
           <View style={styles.sliderOverlay}>
-            <SubscribeShareButtons />
+            
           </View>
           
           <View style={styles.paginationContainer}>
@@ -461,14 +461,14 @@ export default function MainHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "#121212", // Darker modern background
   },
   mainContent: {
     paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "#121212",
   },
   loadingGradient: {
     flex: 1,
@@ -476,15 +476,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    color: "#fff",
+    color: "#FF6B35",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     marginTop: 16,
     textAlign: "center",
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "#121212",
   },
   errorContent: {
     flex: 1,
@@ -493,63 +493,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   errorTitle: {
-    color: "#fff",
+    color: "#FF6B35",
     fontSize: 24,
     fontWeight: "700",
     marginTop: 16,
     marginBottom: 8,
   },
   errorText: {
-    color: "#999",
+    color: "#BBB",
     fontSize: 16,
     textAlign: "center",
     lineHeight: 24,
     marginBottom: 32,
   },
   retryButton: {
-    backgroundColor: "#e50914",
+    backgroundColor: "#FF6B35",
     paddingHorizontal: 32,
     paddingVertical: 12,
-    borderRadius: 25,
+    borderRadius: 30,
+    elevation: 4,
   },
   retryButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
-  
+
   // Banner Styles
   sliderContainer: {
-    marginBottom: 32,
+    marginBottom: 28,
     position: "relative",
   },
   bannerItemContainer: {
     width: width,
-    height: width * 0.65,
+    height: width * 0.6,
     position: "relative",
+    borderRadius: 16,
+    overflow: "hidden",
   },
   sliderImage: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#111",
+    borderRadius: 16,
+    backgroundColor: "#1E1E1E",
   },
   bannerGradient: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: "50%",
-  },
-  sliderOverlay: {
-    position: "absolute",
-    bottom: 40,
-    left: 20,
-    right: 20,
-    alignItems: "center",
+    height: "55%",
+    borderRadius: 16,
   },
   paginationContainer: {
     position: "absolute",
-    bottom: 16,
+    bottom: 12,
     left: 0,
     right: 0,
     flexDirection: "row",
@@ -557,141 +555,127 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#fff",
-    marginHorizontal: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#FF6B35",
+    marginHorizontal: 5,
   },
   navButton: {
     position: "absolute",
     top: "50%",
     transform: [{ translateY: -22 }],
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     borderRadius: 22,
     width: 44,
     height: 44,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
   },
-  prevButton: {
-    left: 20,
-  },
-  nextButton: {
-    right: 20,
-  },
-  
+  prevButton: { left: 16 },
+  nextButton: { right: 16 },
+
   // Button Styles
   buttonContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 20,
   },
   subscribeButton: {
     marginRight: 16,
     borderRadius: 25,
     overflow: "hidden",
-    elevation: 8,
-    shadowColor: "#FF6B35",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    elevation: 6,
   },
   subscribeGradient: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   subscribeText: {
     marginLeft: 8,
     color: "#fff",
     fontWeight: "700",
-    fontSize: 16,
+    fontSize: 15,
   },
   shareButton: {
     borderRadius: 25,
     overflow: "hidden",
   },
   shareButtonInner: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     borderRadius: 25,
     padding: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
   },
-  
+
   // Section Styles
   sectionContainer: {
-    marginBottom: 32,
+    marginBottom: 28,
   },
   sectionTitle: {
-    color: "#fff",
-    fontSize: 22,
+    color: "#FF6B35",
+    fontSize: 20,
     fontWeight: "700",
-    marginBottom: 16,
+    marginBottom: 12,
     paddingHorizontal: 20,
-    letterSpacing: 0.5,
   },
   horizontalListContent: {
     paddingHorizontal: 16,
   },
-  
+
   // Card Styles
   card: {
-    marginHorizontal: 4,
+    marginHorizontal: 6,
     width: 140,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
+    backgroundColor: "#1E1E1E",
+    elevation: 3,
   },
   cardImageContainer: {
     position: "relative",
     width: "100%",
     height: 200,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
   },
   cardImage: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#222",
+    backgroundColor: "#333",
   },
   cardGradient: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: "40%",
+    height: "45%",
   },
   playButton: {
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    borderRadius: 20,
+    backgroundColor: "rgba(255, 107, 53, 0.9)",
+    borderRadius: 18,
     width: 36,
     height: 36,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   cardContent: {
-    paddingTop: 12,
-    paddingHorizontal: 4,
+    paddingTop: 8,
+    paddingHorizontal: 6,
   },
   cardTitle: {
     color: "#fff",
     fontWeight: "600",
     fontSize: 14,
-    lineHeight: 18,
     marginBottom: 4,
   },
   cardMeta: {
-    color: "#999",
-    fontSize: 12,
-    lineHeight: 16,
+    color: "#BBB",
+    fontSize: 11,
   },
 });

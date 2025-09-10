@@ -1,472 +1,267 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
   FlatList,
   Image,
-  StyleSheet,
+  TouchableOpacity,
+  TextInput,
   Dimensions,
-  Share,
+  ActivityIndicator,
+  StyleSheet,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
-import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import Header from "../navigation/Header";
-
+import TopTabs from "../navigation/TopTabs";
 
 const { width } = Dimensions.get("window");
+const CARD_HEIGHT = 180; // image height only
 
-const IMAGE_URL =
-  "https://cdn.pixabay.com/photo/2025/03/13/10/50/fall-9467534_1280.jpg";
-
-const VIDEO_DATA = {
-  "All Videos": [
-    {
-      section: "Top Movies",
-      items: [
-        {
-          id: "1",
-          title: "Humko Deewana Kar Gaye",
-          author: "Raj Kanwar",
-          image: IMAGE_URL,
-          videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-          year: "2006",
-          genre: "Romance",
-          duration: "02h 29min",
-          rating: "6.0",
-          age: "18+",
-          description: "A Bollywood romance film starring Akshay Kumar and Katrina Kaif.",
-          languages: "Hindi",
-          advisory: "Abusive Language, Smoking",
-        },
-        {
-          id: "2",
-          title: "Dhoom 2",
-          author: "Sanjay Gadhvi",
-          image: "https://picsum.photos/800/400?1",
-          videoUrl: "https://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4",
-          year: "2006",
-          genre: "Action",
-          duration: "02h 32min",
-          rating: "6.5",
-          age: "13+",
-          description: "A high-octane action thriller with Hrithik Roshan.",
-          languages: "Hindi",
-          advisory: "Violence",
-        },
-      ],
-    },
-    {
-      section: "Popular Web Series",
-      items: [
-        {
-          id: "3",
-          title: "Sacred Games",
-          author: "Anurag Kashyap",
-          image: "https://picsum.photos/800/400?2",
-          year: "2018",
-          genre: "Crime",
-          duration: "50min/ep",
-          rating: "8.5",
-          age: "18+",
-          description: "A gritty crime drama set in Mumbai's underworld.",
-          languages: "Hindi, English",
-          advisory: "Violence, Nudity",
-          episodes: [
-            {
-              id: "1",
-              episodeNumber: "Episode 1",
-              title: "Ashwatthama",
-              videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-              thumbnail: "https://picsum.photos/200/100?1",
-              duration: "50min",
-              description: "Sartaj Singh receives a mysterious tip.",
-            },
-            {
-              id: "2",
-              episodeNumber: "Episode 2",
-              title: "Halahala",
-              videoUrl: "https://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4",
-              thumbnail: "https://picsum.photos/200/100?2",
-              duration: "48min",
-              description: "Sartaj digs deeper into Gaitonde's past.",
-            },
-          ],
-        },
-        {
-          id: "4",
-          title: "Mirzapur",
-          author: "Puneet Krishna",
-          image: "https://picsum.photos/800/400?3",
-          year: "2018",
-          genre: "Crime",
-          duration: "45min/ep",
-          rating: "8.4",
-          age: "18+",
-          description: "A tale of power and violence in the heartland.",
-          languages: "Hindi",
-          advisory: "Violence, Language",
-          episodes: [
-            {
-              id: "1",
-              episodeNumber: "Episode 1",
-              title: "Jhandu",
-              videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-              thumbnail: "https://picsum.photos/200/100?3",
-              duration: "45min",
-              description: "Kaleen Bhaiya's empire faces a challenge.",
-            },
-            {
-              id: "2",
-              episodeNumber: "Episode 2",
-              title: "Gooda",
-              videoUrl: "https://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4",
-              thumbnail: "https://picsum.photos/200/100?4",
-              duration: "47min",
-              description: "Guddu and Bablu take a stand.",
-            },
-          ],
-        },
-      ],
-    },
-  ],
-  Movies: [
-    {
-      section: "Bollywood Hits",
-      items: [
-        {
-          id: "1",
-          title: "Humko Deewana Kar Gaye",
-          author: "Raj Kanwar",
-          image: IMAGE_URL,
-          videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-          year: "2006",
-          genre: "Romance",
-          duration: "02h 29min",
-          rating: "6.0",
-          age: "18+",
-          description: "A Bollywood romance film starring Akshay Kumar and Katrina Kaif.",
-          languages: "Hindi",
-          advisory: "Abusive Language, Smoking",
-        },
-        {
-          id: "2",
-          title: "Dhoom 2",
-          author: "Sanjay Gadhvi",
-          image: "https://picsum.photos/800/400?1",
-          videoUrl: "https://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4",
-          year: "2006",
-          genre: "Action",
-          duration: "02h 32min",
-          rating: "6.5",
-          age: "13+",
-          description: "A high-octane action thriller with Hrithik Roshan.",
-          languages: "Hindi",
-          advisory: "Violence",
-        },
-      ],
-    },
-  ],
-  "Web Series": [
-    {
-      section: "Trending Series",
-      items: [
-        {
-          id: "3",
-          title: "Sacred Games",
-          author: "Anurag Kashyap",
-          image: "https://picsum.photos/800/400?2",
-          year: "2018",
-          genre: "Crime",
-          duration: "50min/ep",
-          rating: "8.5",
-          age: "18+",
-          description: "A gritty crime drama set in Mumbai's underworld.",
-          languages: "Hindi, English",
-          advisory: "Violence, Nudity",
-          episodes: [
-            {
-              id: "1",
-              episodeNumber: "Episode 1",
-              title: "Ashwatthama",
-              videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-              thumbnail: "https://picsum.photos/200/100?1",
-              duration: "50min",
-              description: "Sartaj Singh receives a mysterious tip.",
-            },
-            {
-              id: "2",
-              episodeNumber: "Episode 2",
-              title: "Halahala",
-              videoUrl: "https://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4",
-              thumbnail: "https://picsum.photos/200/100?2",
-              duration: "48min",
-              description: "Sartaj digs deeper into Gaitonde's past.",
-            },
-          ],
-        },
-        {
-          id: "4",
-          title: "Mirzapur",
-          author: "Puneet Krishna",
-          image: "https://picsum.photos/800/400?3",
-          year: "2018",
-          genre: "Crime",
-          duration: "45min/ep",
-          rating: "8.4",
-          age: "18+",
-          description: "A tale of power and violence in the heartland.",
-          languages: "Hindi",
-          advisory: "Violence, Language",
-          episodes: [
-            {
-              id: "1",
-              episodeNumber: "Episode 1",
-              title: "Jhandu",
-              videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-              thumbnail: "https://picsum.photos/200/100?3",
-              duration: "45min",
-              description: "Kaleen Bhaiya's empire faces a challenge.",
-            },
-            {
-              id: "2",
-              episodeNumber: "Episode 2",
-              title: "Gooda",
-              videoUrl: "https://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4",
-              thumbnail: "https://picsum.photos/200/100?4",
-              duration: "47min",
-              description: "Guddu and Bablu take a stand.",
-            },
-          ],
-        },
-      ],
-    },
-  ],
-};
-
-// Placeholder for SubscribeShareButtons (adapted from HomeScreen.js)
-const SubscribeShareButtons = () => (
-  <View style={styles.row}>
-    <TouchableOpacity style={styles.subscribeBtn}>
-      <Text style={styles.subscribeText}>Subscribe</Text>
-    </TouchableOpacity>
-    <TouchableOpacity
-      style={styles.shareBtn}
-      onPress={() => Share.share({ message: "Check out this video!" })}
-    >
-      <Ionicons name="share-outline" size={20} color="#fff" />
-    </TouchableOpacity>
-  </View>
-);
+const API_URL =
+  "http://10.159.104.40/ott_app/AppApi/all_content.php?status=active&api_key=your_secure_api_key";
 
 export default function Videos() {
-  const [selectedTab, setSelectedTab] = useState("All Videos");
   const navigation = useNavigation();
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [error, setError] = useState(null);
 
-  const renderSection = ({ item }) => {
-    // Slider for featured videos
-    if (item.type === "slider") {
-      return (
-        <View style={styles.sliderWrapper}>
-          <FlatList
-            data={VIDEO_DATA[selectedTab][0].items.slice(0, 3)}
-            horizontal
-            pagingEnabled
-            keyExtractor={(it) => it.id}
-            showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("ViewDetails", {
-                    title: item.title,
-                    image: item.image,
-                    videoUrl: item.videoUrl,
-                    year: item.year,
-                    genre: item.genre,
-                    duration: item.duration,
-                    rating: item.rating,
-                    age: item.age,
-                    description: item.description,
-                    languages: item.languages,
-                    advisory: item.advisory,
-                    episodes: item.episodes || [],
-                  })
-                }
-              >
-                <Image source={{ uri: item.image }} style={styles.sliderImage} />
-              </TouchableOpacity>
-            )}
-          />
-          <View style={styles.sliderOverlay}>
-            <SubscribeShareButtons />
-          </View>
-        </View>
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(API_URL);
+      const json = await res.json();
+      if (json.status === "success" && json.data) {
+        const filtered = json.data.filter(
+          (item) => item.main_category_name.toLowerCase() !== "audio"
+        );
+        setData(filtered);
+      } else setError(json.message || "Failed to load videos");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFilteredData = () => {
+    let filtered = data;
+
+    if (filterCategory) {
+      filtered = filtered.filter(
+        (item) =>
+          item.main_category_name.toLowerCase() === filterCategory.toLowerCase()
       );
     }
 
-    // Video sections
+    if (searchText.trim() !== "") {
+      filtered = filtered.filter((item) =>
+        item.title.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+
+    return filtered;
+  };
+
+  const renderCard = ({ item }) => {
+    const filteredData = getFilteredData();
+    let dynamicWidth = width / 2 - 15;
+
+    if (filteredData.length === 1) dynamicWidth = width - 20;
+    else if (filteredData.length === 2) dynamicWidth = (width - 30) / 2;
+
     return (
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>{item.section}</Text>
-        <FlatList
-          horizontal
-          data={item.items}
-          keyExtractor={(it) => item.section + "-" + it.id}
-          renderItem={({ item: it }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() =>
-                navigation.navigate("ViewDetails", {
-                  title: it.title,
-                  image: it.image,
-                  videoUrl: it.videoUrl,
-                  year: it.year,
-                  genre: it.genre,
-                  duration: it.duration,
-                  rating: it.rating,
-                  age: it.age,
-                  description: it.description,
-                  languages: it.languages,
-                  advisory: it.advisory,
-                  episodes: it.episodes || [],
-                })
-              }
-            >
-              <Image source={{ uri: it.image }} style={styles.image} />
-              <Text style={styles.title}>{it.title}</Text>
-              <Text style={styles.author}>{it.author}</Text>
-            </TouchableOpacity>
-          )}
-          showsHorizontalScrollIndicator={false}
-        />
-      </View>
+      <TouchableOpacity
+        style={[styles.card, { width: dynamicWidth }]}
+        onPress={() => {
+          // Log the item data
+          console.log("Movies item pressed:", item);
+
+          // Navigate to ViewDetails
+          navigation.navigate("ViewDetails", {
+            item: {
+              id: item.id?.toString() || item.content_id?.toString() || "0",
+              title: item.title || "Unknown Title",
+              author: item.industry || "Unknown",
+              image: item.thumbnail_url || DEFAULT_IMAGE,
+              description: item.description || "",
+              main_category: item.main_category_name || "Unknown",
+              category: item.category_name || "Unknown",
+              language: item.language_name || "Unknown",
+              preference: item.preference_name || "Unknown",
+              plan_type: item.plan_type || "Unknown",
+            },
+          });
+        }}
+      >
+        {/* Image */}
+        <View
+          style={{ height: CARD_HEIGHT, borderRadius: 10, overflow: "hidden" }}
+        >
+          <Image
+            source={{ uri: item.thumbnail_url }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+
+          {/* Top Badges */}
+          <View style={styles.topBadgesRow}>
+            {item.language_name && (
+              <Text style={[styles.topBadge, { backgroundColor: "#6a1b9a" }]}>
+                {item.language_name}
+              </Text>
+            )}
+            {item.preference_name && (
+              <Text style={[styles.topBadge, { backgroundColor: "#0277bd" }]}>
+                {item.preference_name}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Title */}
+        <Text style={styles.title} numberOfLines={2}>
+          {item.title}
+        </Text>
+
+        {/* Category */}
+        <Text style={styles.category}>{item.category_name}</Text>
+      </TouchableOpacity>
     );
   };
 
-  // Merge slider + selectedTab sections
-  const listData = [{ type: "slider", id: "slider" }, ...VIDEO_DATA[selectedTab]];
+  if (loading)
+    return (
+      <ActivityIndicator
+        size="large"
+        color="#F97316"
+        style={{ marginTop: 50 }}
+      />
+    );
+
+  if (error)
+    return (
+      <View style={styles.center}>
+        <Text style={{ color: "red" }}>{error}</Text>
+      </View>
+    );
 
   return (
     <View style={styles.container}>
       <Header />
-   
-      <View style={styles.tabContainer}>
-        {["All Videos", "Movies", "Web Series"].map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => setSelectedTab(tab)}
-          >
-            <Text
-              style={[styles.tabText, selectedTab === tab && styles.activeTab]}
-            >
-              {tab}
-            </Text>
+      <TopTabs initialRouteName="Videos" />
+
+      {/* Search */}
+      <View style={styles.searchContainer}>
+        <Ionicons
+          name="search-outline"
+          size={20}
+          color="#fff"
+          style={{ marginRight: 8 }}
+        />
+        <TextInput
+          placeholder="Search videos..."
+          placeholderTextColor="#888"
+          value={searchText}
+          onChangeText={setSearchText}
+          style={styles.searchInput}
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchText("")}>
+            <Ionicons name="close-circle" size={22} color="#aaa" />
           </TouchableOpacity>
-        ))}
+        )}
       </View>
+
+      {/* Dropdown */}
+      <View style={styles.dropdownContainer}>
+        <Picker
+          selectedValue={filterCategory}
+          onValueChange={(itemValue) => setFilterCategory(itemValue)}
+          style={styles.picker}
+          dropdownIconColor="#fff"
+        >
+          <Picker.Item label="Select Category" value="" />
+          <Picker.Item label="Movies" value="Movies" />
+          <Picker.Item label="Webseries" value="Webseries" />
+          <Picker.Item label="TV Shows" value="TV Shows" />
+        </Picker>
+      </View>
+
+      {/* Video List */}
       <FlatList
-        data={listData}
-        keyExtractor={(item, index) => item.id || index.toString()}
-        renderItem={renderSection}
+        data={getFilteredData()}
+        keyExtractor={(item) => item.id || item.title}
+        renderItem={renderCard}
+        numColumns={2}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 20 }}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000",
-  },
-  tabContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#111",
-    paddingVertical: 10,
-  },
-  tabText: {
-    color: "gray",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  activeTab: {
-    color: "#F97316",
-    borderBottomWidth: 2,
-    borderBottomColor: "#F97316",
-  },
-  sliderWrapper: {
-    position: "relative",
-    marginBottom: 20,
-  },
-  sliderImage: {
-    width: width,
-    height: width * (9 / 16), // 16:9 aspect ratio
-    borderRadius: 12,
-    marginRight: 10,
-  },
-  sliderOverlay: {
-    position: "absolute",
-    top: "40%",
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  row: {
+  container: { flex: 1, backgroundColor: "#000" },
+  searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.6)",
-    padding: 8,
-    borderRadius: 30,
-  },
-  subscribeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F97316",
-    borderRadius: 20,
+    backgroundColor: "#1c1c1c",
+    margin: 1,
+    borderRadius: 25,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    paddingHorizontal: 14,
-    marginRight: 10,
   },
-  subscribeText: {
-    color: "#fff",
-    marginLeft: 7,
-    fontWeight: "600",
-    fontSize: 15,
+  searchInput: { flex: 1, color: "#fff", fontSize: 14 },
+  dropdownContainer: {
+    marginHorizontal: 12,
+    marginBottom: 10,
+    backgroundColor: "#111",
+    borderRadius: 8,
   },
-  shareBtn: {
-    backgroundColor: "#F97316",
-    borderRadius: 20,
-    padding: 9,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sectionContainer: {
-    marginVertical: 10,
-  },
-  sectionTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginLeft: 10,
-    marginBottom: 5,
-  },
+  picker: { color: "#fff" },
   card: {
-    marginHorizontal: 10,
-    width: 140,
-  },
-  image: {
-    width: 140,
-    height: 140,
+    marginHorizontal: 5,
+    marginBottom: 15,
     borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#111",
   },
   title: {
     color: "#fff",
     fontWeight: "600",
     marginTop: 5,
+    paddingHorizontal: 5,
   },
-  author: {
+  category: {
     color: "#9CA3AF",
     fontSize: 12,
+    paddingHorizontal: 5,
+    marginBottom: 5,
   },
+  topBadgesRow: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    flexDirection: "row",
+    zIndex: 2,
+  },
+  topBadge: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginRight: 6,
+  },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
