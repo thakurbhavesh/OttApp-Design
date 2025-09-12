@@ -37,7 +37,7 @@ export default function Audio() {
   const [searchText, setSearchText] = useState("");
 
   const API_URL =
-    "http://10.159.104.40/ott_app/AppApi/all_content.php?api_key=your_secure_api_key&status=active&main_category_id=4";
+    "http://10.205.61.40/ott_app/AppApi/all_content.php?api_key=your_secure_api_key&status=active&main_category_id=4";
 
   useEffect(() => {
     fetchData();

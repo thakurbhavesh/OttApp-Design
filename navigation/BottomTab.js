@@ -1,13 +1,13 @@
 // navigation/BottomTab.js
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'; // Verified import
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Header from './Header';
 import TopTabs from './TopTabs';
-import ViewDetails from '../screens/Viewdetails'; // Ensure this file exists
+import ViewDetails from '../screens/ViewDetails';
 import Profile from '../screens/Profile';
 import Profilescreen from '../screens/Profilescreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -16,7 +16,11 @@ import Library from '../screens/Library';
 import Audio from '../screens/Audio';
 
 const BottomTab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator(); // Root for shared screens like ViewDetails
+const HomeStack = createNativeStackNavigator(); // Distinct for Home
+const VideosStack = createNativeStackNavigator(); // Distinct for Videos
+const AudioStack = createNativeStackNavigator(); // Distinct for Audio
+const LibraryStack = createNativeStackNavigator(); // Distinct for Library
 
 const colors = {
   accent: '#FF9500',
@@ -27,13 +31,12 @@ const colors = {
 
 function HomeScreen() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeTabs" component={HomeTabs} />
-      <Stack.Screen name="ViewDetails" component={ViewDetails} />
-      <Stack.Screen name="Profile" component={Profile} />
-      <Stack.Screen name="ProfileScreen" component={Profilescreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
-    </Stack.Navigator>
+    <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+      <HomeStack.Screen name="HomeTabs" component={HomeTabs} />
+      <HomeStack.Screen name="Profile" component={Profile} />
+      <HomeStack.Screen name="ProfileScreen" component={Profilescreen} />
+      <HomeStack.Screen name="Settings" component={SettingsScreen} />
+    </HomeStack.Navigator>
   );
 }
 
@@ -46,18 +49,33 @@ function HomeTabs() {
   );
 }
 
-function VideosStack() {
+function VideosStackNavigator() {
   return (
-    <Stack.Navigator
+    <VideosStack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: '#000' },
         headerTintColor: '#fff',
         headerTitleStyle: { fontWeight: 'bold' },
       }}
     >
-      <Stack.Screen name="VideosScreen" component={VideosScreen} options={{ title: 'Videos' }} />
-      <Stack.Screen name="ViewDetails" component={ViewDetails} options={{ title: 'Details' }} />
-    </Stack.Navigator>
+      <VideosStack.Screen name="VideosScreen" component={VideosScreen} options={{ title: 'Videos' }} />
+    </VideosStack.Navigator>
+  );
+}
+
+function AudioStackNavigator() {
+  return (
+    <AudioStack.Navigator screenOptions={{ headerShown: false }}>
+      <AudioStack.Screen name="Audio" component={Audio} />
+    </AudioStack.Navigator>
+  );
+}
+
+function LibraryStackNavigator() {
+  return (
+    <LibraryStack.Navigator screenOptions={{ headerShown: false }}>
+      <LibraryStack.Screen name="Library" component={Library} />
+    </LibraryStack.Navigator>
   );
 }
 
@@ -79,7 +97,8 @@ const CustomTabBarButton = ({ children, onPress, accessibilityState }) => {
   );
 };
 
-export default function BottomTabNavigator() {
+// Standalone component for the bottom tabs (valid React component)
+function MainTabsNavigator() {
   return (
     <BottomTab.Navigator
       screenOptions={({ route }) => ({
@@ -103,10 +122,24 @@ export default function BottomTabNavigator() {
       })}
     >
       <BottomTab.Screen name="Home" component={HomeScreen} />
-      <BottomTab.Screen name="Videos" component={VideosStack} />
-      <BottomTab.Screen name="Audio" component={Audio} />
-      <BottomTab.Screen name="Library" component={Library} />
+      <BottomTab.Screen name="Videos" component={VideosStackNavigator} />
+      <BottomTab.Screen name="Audio" component={AudioStackNavigator} />
+      <BottomTab.Screen name="Library" component={LibraryStackNavigator} />
     </BottomTab.Navigator>
+  );
+}
+
+// Root navigator using the standalone MainTabsNavigator component
+export default function BottomTabNavigator() {
+  return (
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      <RootStack.Screen name="MainTabs" component={MainTabsNavigator} />
+      <RootStack.Screen 
+        name="ViewDetails" 
+        component={ViewDetails} 
+        options={{ presentation: 'modal' }} // Optional: Modal for details
+      />
+    </RootStack.Navigator>
   );
 }
 

@@ -23,7 +23,7 @@ import { BlurView } from "expo-blur";
 const { width, height } = Dimensions.get("window");
 
 const API_KEY = "your_secure_api_key";
-const CONTENT_API_URL = "http://10.159.104.40/ott_app/AppApi/content_by_id.php";
+const CONTENT_API_URL = "http://10.205.61.40/ott_app/AppApi/content_by_id.php";
 const DEFAULT_IMAGE = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg";
 
 export default function ViewDetails() {

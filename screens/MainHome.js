@@ -19,8 +19,8 @@ import { LinearGradient } from "expo-linear-gradient";
 const { width, height } = Dimensions.get("window");
 
 const API_KEY = "your_secure_api_key"; // Replace with your actual API key
-const BASE_URL = "http://10.159.104.40/ott_app/AppApi/show_content.php";
-const NEW_RELEASE_URL = "http://10.159.104.40/ott_app/AppApi/new_releases.php";
+const BASE_URL = "http://10.205.61.40/ott_app/AppApi/show_content.php";
+const NEW_RELEASE_URL = "http://10.205.61.40/ott_app/AppApi/new_releases.php";
 const DEFAULT_IMAGE = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg";
 
 function SubscribeShareButtons() {
@@ -62,7 +62,7 @@ export default function MainHome() {
   // Fix thumbnail URLs
   const fixThumbnailUrl = (url) => {
     if (!url || url === "null" || url === null) return DEFAULT_IMAGE;
-    return url.replace("http://localhost/ott_app", "http://10.159.104.40/ott_app");
+    return url.replace("http://localhost/ott_app", "http://10.205.61.40/ott_app");
   };
 
   // Generate unique ID for items without content_id

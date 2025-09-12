@@ -20,7 +20,7 @@ const { width } = Dimensions.get("window");
 const CARD_HEIGHT = 180; // image height only
 
 const API_URL =
-  "http://10.159.104.40/ott_app/AppApi/all_content.php?status=active&api_key=your_secure_api_key";
+  "http://10.205.61.40/ott_app/AppApi/all_content.php?status=active&api_key=your_secure_api_key";
 
 export default function Videos() {
   const navigation = useNavigation();
