@@ -354,7 +354,7 @@ export default function MainHome() {
           />
           
           <View style={styles.sliderOverlay}>
-            <SubscribeShareButtons />
+            {/* <SubscribeShareButtons /> */}
           </View>
           
           <View style={styles.paginationContainer}>
