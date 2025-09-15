@@ -156,7 +156,7 @@ export default function Videos() {
 
   return (
     <View style={styles.container}>
-      <Header />
+      {/* <Header /> */}
       <TopTabs initialRouteName="Videos" />
 
       {/* Search */}

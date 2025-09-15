@@ -1,5 +1,5 @@
 // navigation/BottomTab.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -14,13 +14,17 @@ import SettingsScreen from '../screens/SettingsScreen';
 import VideosScreen from '../screens/VideosScreen';
 import Library from '../screens/Library';
 import Audio from '../screens/Audio';
+import SearchScreen from '../screens/SearchScreen';
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation
 
 const BottomTab = createBottomTabNavigator();
-const RootStack = createNativeStackNavigator(); // Root for shared screens like ViewDetails
-const HomeStack = createNativeStackNavigator(); // Distinct for Home
-const VideosStack = createNativeStackNavigator(); // Distinct for Videos
-const AudioStack = createNativeStackNavigator(); // Distinct for Audio
-const LibraryStack = createNativeStackNavigator(); // Distinct for Library
+const RootStack = createNativeStackNavigator();
+const HomeStack = createNativeStackNavigator();
+const VideosStack = createNativeStackNavigator();
+const AudioStack = createNativeStackNavigator();
+const LibraryStack = createNativeStackNavigator();
+const SearchStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
 
 const colors = {
   accent: '#FF9500',
@@ -79,13 +83,52 @@ function LibraryStackNavigator() {
   );
 }
 
-const CustomTabBarButton = ({ children, onPress, accessibilityState }) => {
-  const focused = accessibilityState?.selected;
+function SearchStackNavigator() {
   return (
-    <TouchableOpacity style={{ flex: 1 }} activeOpacity={0.9} onPress={onPress}>
+    <SearchStack.Navigator screenOptions={{ headerShown: false }}>
+      <SearchStack.Screen name="Search" component={SearchScreen} />
+    </SearchStack.Navigator>
+  );
+}
+
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="Profile" component={Profile} />
+      <ProfileStack.Screen name="ProfileScreen" component={Profilescreen} />
+      <ProfileStack.Screen name="Settings" component={SettingsScreen} />
+    </ProfileStack.Navigator>
+  );
+}
+
+const CustomTabBarButton = ({ children, onPress, accessibilityState, routeName }) => {
+  const focused = accessibilityState?.selected;
+  const isProfileActive = ['Profile', 'ProfileScreen', 'Settings'].includes(routeName);
+
+  const handlePress = () => {
+    if (isProfileActive && routeName !== 'Profile') {
+      // Prevent navigation from Profile sub-screens to other tabs
+      return;
+    }
+    if (focused) return;
+
+    onPress(); // Proceed with normal navigation
+  };
+
+  return (
+    <TouchableOpacity
+      style={{ flex: 1 }}
+      activeOpacity={0.9}
+      onPress={handlePress}
+      disabled={isProfileActive && routeName !== 'Profile'}
+    >
       <LinearGradient
         colors={
-          focused ? [colors.accent, '#FF9500'] : [colors.background, colors.background]
+          focused
+            ? [colors.accent, '#FF9500']
+            : isProfileActive && routeName !== 'Profile'
+            ? [colors.background, colors.background]
+            : [colors.background, colors.background]
         }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -97,8 +140,25 @@ const CustomTabBarButton = ({ children, onPress, accessibilityState }) => {
   );
 };
 
-// Standalone component for the bottom tabs (valid React component)
 function MainTabsNavigator() {
+  const navigation = useNavigation(); // Use useNavigation hook
+  const [lastTab, setLastTab] = useState('Home');
+
+  useEffect(() => {
+    // Update lastTab when navigating to a new tab (except Profile)
+    const unsubscribe = navigation.addListener('state', (e) => {
+      const currentState = navigation.getState();
+      if (currentState && currentState.routes) {
+        const currentRoute = currentState.routes[currentState.index];
+        if (currentRoute && !['Profile', 'ProfileScreen', 'Settings'].includes(currentRoute.name)) {
+          setLastTab(currentRoute.name);
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   return (
     <BottomTab.Navigator
       screenOptions={({ route }) => ({
@@ -110,34 +170,52 @@ function MainTabsNavigator() {
           borderTopWidth: 0,
           height: 60,
         },
-        tabBarIcon: ({ color }) => {
+        tabBarIcon: ({ color, focused }) => {
           let iconName;
-          if (route.name === 'Home') iconName = 'home-outline';
-          else if (route.name === 'Videos') iconName = 'videocam-outline';
-          else if (route.name === 'Audio') iconName = 'musical-notes-outline';
-          else if (route.name === 'Library') iconName = 'library-outline';
+          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
+          else if (route.name === 'Videos') iconName = focused ? 'videocam' : 'videocam-outline';
+          else if (route.name === 'Audio') iconName = focused ? 'musical-notes' : 'musical-notes-outline';
+          else if (route.name === 'Library') iconName = focused ? 'library' : 'library-outline';
+          else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
+          else if (route.name === 'Search') iconName = focused ? 'search' : 'search-outline';
           return <Ionicons name={iconName} size={22} color={color} />;
         },
-        tabBarButton: (props) => <CustomTabBarButton {...props} />,
+        tabBarButton: (props) => <CustomTabBarButton {...props} routeName={route.name} />,
       })}
     >
       <BottomTab.Screen name="Home" component={HomeScreen} />
       <BottomTab.Screen name="Videos" component={VideosStackNavigator} />
       <BottomTab.Screen name="Audio" component={AudioStackNavigator} />
       <BottomTab.Screen name="Library" component={LibraryStackNavigator} />
+      <BottomTab.Screen name="Search" component={SearchStackNavigator} />
+      <BottomTab.Screen
+        name="Profile"
+        component={ProfileStackNavigator}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            // Store last tab and navigate to Profile
+            const currentState = navigation.getState();
+            if (currentState && currentState.routes) {
+              const currentRoute = currentState.routes[currentState.index];
+              if (currentRoute && !['Profile', 'ProfileScreen', 'Settings'].includes(currentRoute.name)) {
+                setLastTab(currentRoute.name);
+              }
+            }
+          },
+        })}
+      />
     </BottomTab.Navigator>
   );
 }
 
-// Root navigator using the standalone MainTabsNavigator component
 export default function BottomTabNavigator() {
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
       <RootStack.Screen name="MainTabs" component={MainTabsNavigator} />
-      <RootStack.Screen 
-        name="ViewDetails" 
-        component={ViewDetails} 
-        options={{ presentation: 'modal' }} // Optional: Modal for details
+      <RootStack.Screen
+        name="ViewDetails"
+        component={ViewDetails}
+        options={{ presentation: 'modal' }}
       />
     </RootStack.Navigator>
   );

@@ -146,7 +146,7 @@ export default function Audio() {
 
   return (
     <View style={styles.container}>
-      <Header />
+      {/* <Header /> */}
 
       {/* Tabs */}
       <View style={styles.tabContainer}>

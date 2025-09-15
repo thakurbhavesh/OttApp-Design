@@ -1,3 +1,4 @@
+// screens/MainHome.js
 import React, { useEffect, useState, useRef } from "react";
 import {
   SafeAreaView,
@@ -15,18 +16,25 @@ import { useNavigation } from "@react-navigation/native";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width, height } = Dimensions.get("window");
 
 const API_KEY = "your_secure_api_key"; // Replace with your actual API key
 const BASE_URL = "http://10.205.61.40/ott_app/AppApi/show_content.php";
 const NEW_RELEASE_URL = "http://10.205.61.40/ott_app/AppApi/new_releases.php";
+const USER_API = "http://10.205.61.40/ott_app/AppApi/insert_user.php";
 const DEFAULT_IMAGE = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg";
 
 function SubscribeShareButtons() {
+  const navigation = useNavigation();
+
   return (
     <View style={styles.buttonContainer}>
-      <TouchableOpacity style={styles.subscribeButton}>
+      <TouchableOpacity
+        style={styles.subscribeButton}
+        onPress={() => navigation.navigate("MainTabs", { screen: "Home", params: { screen: "Profile" } })}
+      >
         <LinearGradient
           colors={["#FF6B35", "#F7931E"]}
           style={styles.subscribeGradient}
@@ -147,11 +155,42 @@ export default function MainHome() {
     }
   };
 
-  // Fetch data
+  // Fetch data and check for new user
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
       try {
+        // Check if user_id exists
+        const storedId = await AsyncStorage.getItem("user_id");
+        let isNewUser = false;
+
+        if (!storedId) {
+          // Insert new user
+          const res = await fetch(USER_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
+
+          if (!res.ok) {
+            throw new Error(`User insert API error: ${res.status}`);
+          }
+
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("User insert API response is not valid JSON");
+          }
+
+          const json = await res.json();
+          if (json.status === "success") {
+            await AsyncStorage.setItem("user_id", String(json.user_id));
+            isNewUser = true;
+          } else {
+            throw new Error(json.error || "Failed to create user");
+          }
+        }
+
+        // Fetch content data
         const [banner, topShows, bingeWorthy, bollywoodBinge, dubbedInHindi, newReleases] = await Promise.all([
           fetchFilteredData("banner"),
           fetchFilteredData("top_shows"),
@@ -174,16 +213,21 @@ export default function MainHome() {
         setBollywoodBingeData(bollywoodBinge);
         setDubbedInHindiData(dubbedInHindi);
         setNewReleaseData(newReleases);
+
+        // Redirect to Profile screen for new users
+        if (isNewUser) {
+          navigation.navigate("MainTabs", { screen: "Home", params: { screen: "Profile" } });
+        }
       } catch (err) {
         console.error("Fetch all data error:", err);
-        setError("Failed to load content. Please check your connection.");
+        setError(`Failed to load content: ${err.message}`);
       } finally {
         setLoading(false);
       }
     };
 
     fetchAllData();
-  }, []);
+  }, [navigation]);
 
   // Banner navigation handlers
   const handlePrevBanner = () => {
@@ -310,7 +354,7 @@ export default function MainHome() {
           />
           
           <View style={styles.sliderOverlay}>
-            
+            <SubscribeShareButtons />
           </View>
           
           <View style={styles.paginationContainer}>
@@ -367,7 +411,7 @@ export default function MainHome() {
                     category: it.category || "Unknown",
                     language: it.language || "Unknown",
                     preference: it.preference || "Unknown",
-                    plan_type: it.plan_type || "Unknown",
+                    plan_type: it.plan_type || "free", // Ensure plan_type is passed
                   },
                 })
               }
@@ -435,7 +479,7 @@ export default function MainHome() {
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
-            onPress={() => window.location.reload()} // Note: window.location.reload is web-specific; use a different approach for mobile
+            onPress={() => navigation.replace("MainHome")} // Replace window.location.reload with navigation reset
           >
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
@@ -544,6 +588,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: "55%",
     borderRadius: 16,
+  },
+  sliderOverlay: {
+    position: "absolute",
+    bottom: 48,
+    left: 0,
+    right: 0,
+    alignItems: "center",
   },
   paginationContainer: {
     position: "absolute",

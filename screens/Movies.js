@@ -29,7 +29,7 @@ export default function Movies() {
   const [searchText, setSearchText] = useState("");
 
   const BASE_API_URL =
-    "http://10.205.61.40/ott_app/AppApi/all_content.php?status=active&main_category_id=3&api_key=" +
+    "http://10.205.61.40/ott_app/AppApi/all_content.php?status=active&main_category_id=2&api_key=" +
     API_KEY;
 
   useEffect(() => {

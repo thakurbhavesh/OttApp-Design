@@ -42,7 +42,7 @@ export default function Shows() {
       const res = await fetch(BASE_API_URL, { headers: { "X-API-KEY": API_KEY } });
       const json = await res.json();
       if (json.status === "success" && json.data) setSeries(json.data);
-      else setError(json.message || "Failed to load Tv Shows");
+      else setError(json.message || "Failed to load Shows");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -86,7 +86,7 @@ export default function Shows() {
     activeOpacity={0.9}
     onPress={() => {
       // Log the item data
-      console.log("Movies item pressed:", item);
+      console.log("Shows item pressed:", item);
 
       // Navigate to ViewDetails
       navigation.navigate("ViewDetails", {
@@ -169,7 +169,7 @@ export default function Shows() {
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#aaa" style={{ marginRight: 8 }} />
         <TextInput
-          placeholder="Search Tv Shows..."
+          placeholder="Search Shows..."
           placeholderTextColor="#888"
           value={searchText}
           onChangeText={setSearchText}
