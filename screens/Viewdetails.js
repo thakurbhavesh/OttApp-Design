@@ -27,6 +27,7 @@ const { width, height } = Dimensions.get("window");
 
 const API_KEY = "your_secure_api_key";
 const CONTENT_API_URL = "http://10.205.61.40/ott_app/AppApi/content_by_id.php";
+const PREFERENCES_API_URL = "http://10.205.61.40/ott_app/AppApi/manage_preferences.php";
 const DEFAULT_IMAGE = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg";
 
 export default function ViewDetails() {
@@ -82,6 +83,35 @@ export default function ViewDetails() {
     };
     fetchSubscriptionStatus();
   }, []);
+
+  // Fetch initial like and watchlist status
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      const userId = await AsyncStorage.getItem("user_id");
+      if (userId && contentId) {
+        try {
+          const response = await fetch(PREFERENCES_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              api_key: API_KEY,
+              user_id: userId,
+              content_id: contentId,
+              action: "check", // Custom action to check status (modify API if needed)
+            }),
+          });
+          const result = await response.json();
+          if (result.status === "success") {
+            setIsLiked(result.data?.like || false);
+            setIsWatchlisted(result.data?.watchlist || false);
+          }
+        } catch (e) {
+          console.error("Error fetching preferences:", e);
+        }
+      }
+    };
+    fetchPreferences();
+  }, [contentId]);
 
   // Fade-in animation
   useEffect(() => {
@@ -546,7 +576,27 @@ export default function ViewDetails() {
               <View style={styles.secondaryActions}>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => setIsWatchlisted(!isWatchlisted)}
+                  onPress={async () => {
+                    const userId = await AsyncStorage.getItem("user_id");
+                    if (userId) {
+                      const response = await fetch(PREFERENCES_API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          api_key: API_KEY,
+                          user_id: userId,
+                          content_id: contentId,
+                          action: isWatchlisted ? "watchlist_remove" : "watchlist_add",
+                        }),
+                      });
+                      const result = await response.json();
+                      if (result.status === "success") {
+                        setIsWatchlisted(!isWatchlisted);
+                      } else {
+                        console.warn(result.message);
+                      }
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <Ionicons
@@ -555,13 +605,33 @@ export default function ViewDetails() {
                     color={isWatchlisted ? "#e50914" : "#fff"}
                   />
                   <Text style={styles.actionText}>
-                    {isWatchlisted ? "Added" : "Watchlist"}
+                    {isWatchlisted ? "Remove" : "Watchlist"}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => setIsLiked(!isLiked)}
+                  onPress={async () => {
+                    const userId = await AsyncStorage.getItem("user_id");
+                    if (userId) {
+                      const response = await fetch(PREFERENCES_API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          api_key: API_KEY,
+                          user_id: userId,
+                          content_id: contentId,
+                          action: isLiked ? "unlike" : "like",
+                        }),
+                      });
+                      const result = await response.json();
+                      if (result.status === "success") {
+                        setIsLiked(!isLiked);
+                      } else {
+                        console.warn(result.message);
+                      }
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <Ionicons
@@ -570,7 +640,7 @@ export default function ViewDetails() {
                     color={isLiked ? "#e50914" : "#fff"}
                   />
                   <Text style={styles.actionText}>
-                    {isLiked ? "Liked" : "Like"}
+                    {isLiked ? "Unlike" : "Like"}
                   </Text>
                 </TouchableOpacity>
 
@@ -1481,5 +1551,36 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+  },
+    errorTitle: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "700",
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  errorText: {
+    color: "#999",
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  retryButton: {
+    borderRadius: 25,
+    overflow: 'hidden',
+    transform: [{ scale: 1 }],
+    transitionProperty: 'transform, opacity',
+    transitionDuration: '200ms',
+  },
+  retryGradient: {
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

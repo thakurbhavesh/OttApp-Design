@@ -1,10 +1,10 @@
-// navigation/BottomTab.js
 import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 import Header from './Header';
 import TopTabs from './TopTabs';
 import ViewDetails from '../screens/ViewDetails';
@@ -15,7 +15,6 @@ import VideosScreen from '../screens/VideosScreen';
 import Library from '../screens/Library';
 import Audio from '../screens/Audio';
 import SearchScreen from '../screens/SearchScreen';
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation
 
 const BottomTab = createBottomTabNavigator();
 const RootStack = createNativeStackNavigator();
@@ -92,42 +91,63 @@ function SearchStackNavigator() {
 }
 
 function ProfileStackNavigator() {
+  const navigation = useNavigation();
+
   return (
-    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        gestureEnabled: true,
+      }}
+    >
       <ProfileStack.Screen name="Profile" component={Profile} />
-      <ProfileStack.Screen name="ProfileScreen" component={Profilescreen} />
-      <ProfileStack.Screen name="Settings" component={SettingsScreen} />
+      <ProfileStack.Screen
+        name="ProfileScreen"
+        component={Profilescreen}
+        options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.white,
+          headerTitle: 'Profile Details',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+              <Ionicons name="arrow-back" size={24} color={colors.white} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <ProfileStack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.white,
+          headerTitle: 'Settings',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+              <Ionicons name="arrow-back" size={24} color={colors.white} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
     </ProfileStack.Navigator>
   );
 }
 
-const CustomTabBarButton = ({ children, onPress, accessibilityState, routeName }) => {
+const CustomTabBarButton = ({ children, onPress, accessibilityState }) => {
   const focused = accessibilityState?.selected;
-  const isProfileActive = ['Profile', 'ProfileScreen', 'Settings'].includes(routeName);
-
-  const handlePress = () => {
-    if (isProfileActive && routeName !== 'Profile') {
-      // Prevent navigation from Profile sub-screens to other tabs
-      return;
-    }
-    if (focused) return;
-
-    onPress(); // Proceed with normal navigation
-  };
 
   return (
     <TouchableOpacity
       style={{ flex: 1 }}
       activeOpacity={0.9}
-      onPress={handlePress}
-      disabled={isProfileActive && routeName !== 'Profile'}
+      onPress={onPress}
     >
       <LinearGradient
         colors={
           focused
             ? [colors.accent, '#FF9500']
-            : isProfileActive && routeName !== 'Profile'
-            ? [colors.background, colors.background]
             : [colors.background, colors.background]
         }
         start={{ x: 0, y: 0 }}
@@ -141,11 +161,10 @@ const CustomTabBarButton = ({ children, onPress, accessibilityState, routeName }
 };
 
 function MainTabsNavigator() {
-  const navigation = useNavigation(); // Use useNavigation hook
+  const navigation = useNavigation();
   const [lastTab, setLastTab] = useState('Home');
 
   useEffect(() => {
-    // Update lastTab when navigating to a new tab (except Profile)
     const unsubscribe = navigation.addListener('state', (e) => {
       const currentState = navigation.getState();
       if (currentState && currentState.routes) {
@@ -193,13 +212,15 @@ function MainTabsNavigator() {
         component={ProfileStackNavigator}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
-            // Store last tab and navigate to Profile
+            e.preventDefault();
             const currentState = navigation.getState();
-            if (currentState && currentState.routes) {
-              const currentRoute = currentState.routes[currentState.index];
-              if (currentRoute && !['Profile', 'ProfileScreen', 'Settings'].includes(currentRoute.name)) {
-                setLastTab(currentRoute.name);
-              }
+            const currentRoute = currentState.routes[currentState.index];
+
+            if (['Profile', 'ProfileScreen', 'Settings'].includes(currentRoute.name)) {
+              navigation.navigate(lastTab);
+            } else {
+              setLastTab(currentRoute.name);
+              navigation.navigate('Profile');
             }
           },
         })}

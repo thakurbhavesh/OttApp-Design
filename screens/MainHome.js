@@ -1,4 +1,3 @@
-// screens/MainHome.js
 import React, { useEffect, useState, useRef } from "react";
 import {
   SafeAreaView,
@@ -13,7 +12,7 @@ import {
   StatusBar,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -26,23 +25,9 @@ const NEW_RELEASE_URL = "http://10.205.61.40/ott_app/AppApi/new_releases.php";
 const USER_API = "http://10.205.61.40/ott_app/AppApi/insert_user.php";
 const DEFAULT_IMAGE = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg";
 
-function SubscribeShareButtons() {
-  const navigation = useNavigation();
-
+function ShareButton() {
   return (
     <View style={styles.buttonContainer}>
-      <TouchableOpacity
-        style={styles.subscribeButton}
-        onPress={() => navigation.navigate("MainTabs", { screen: "Home", params: { screen: "Profile" } })}
-      >
-        <LinearGradient
-          colors={["#FF6B35", "#F7931E"]}
-          style={styles.subscribeGradient}
-        >
-          <FontAwesome5 name="crown" size={16} color="#fff" />
-          <Text style={styles.subscribeText}>Subscribe Premium</Text>
-        </LinearGradient>
-      </TouchableOpacity>
       <TouchableOpacity style={styles.shareButton}>
         <View style={styles.shareButtonInner}>
           <Ionicons name="share-social" size={18} color="#fff" />
@@ -56,11 +41,20 @@ export default function MainHome() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [bannerData, setBannerData] = useState([]);
+  const [newReleaseData, setNewReleaseData] = useState([]);
   const [topShowsData, setTopShowsData] = useState([]);
   const [bingeWorthyData, setBingeWorthyData] = useState([]);
   const [bollywoodBingeData, setBollywoodBingeData] = useState([]);
   const [dubbedInHindiData, setDubbedInHindiData] = useState([]);
-  const [newReleaseData, setNewReleaseData] = useState([]);
+  const [allInOnePodcastData, setAllInOnePodcastData] = useState([]);
+  const [catchmeTvOriginalsData, setCatchmeTvOriginalsData] = useState([]);
+  const [dailyShowsData, setDailyShowsData] = useState([]);
+  const [villainBabaShowData, setVillainBabaShowData] = useState([]);
+  const [no1VerticalShowsData, setNo1VerticalShowsData] = useState([]);
+  const [satrakRahoData, setSatrakRahoData] = useState([]);
+  const [topWebSeriesData, setTopWebSeriesData] = useState([]);
+  const [topShortFilmsData, setTopShortFilmsData] = useState([]);
+  const [bhojpuriData, setBhojpuriData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
@@ -85,25 +79,22 @@ export default function MainHome() {
         const nextIndex = (currentBannerIndex + 1) % bannerData.length;
         setCurrentBannerIndex(nextIndex);
         bannerRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-      }, 6000); // Increased interval to 6s for smoother transitions
+      }, 6000);
     }
-
     return () => {
-      if (autoScrollRef.current) {
-        clearInterval(autoScrollRef.current);
-      }
+      if (autoScrollRef.current) clearInterval(autoScrollRef.current);
     };
   }, [currentBannerIndex, bannerData.length]);
 
-  // Fetch data for a specific filter
+  // Fetch data for a specific filter with debugging
   const fetchFilteredData = async (filter) => {
     try {
+      // console.log(`Fetching ${filter} data...`);
       const response = await fetch(`${BASE_URL}?api_key=${API_KEY}&status=active&${filter}=1`);
-      if (!response.ok) {
-        throw new Error(`${filter} API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`${filter} API error: ${response.status}`);
       const json = await response.json();
-      if (json.status === "success") {
+      // console.log(`Response for ${filter}:`, json);
+      if (json.status === "success" && Array.isArray(json.data)) {
         return json.data.map((item, index) => ({
           ...item,
           content_id: item.content_id || generateUniqueId(item, index),
@@ -111,7 +102,8 @@ export default function MainHome() {
           description: item.description || "",
         }));
       } else {
-        throw new Error(`${filter} API returned failure status`);
+        console.warn(`${filter} API returned no data or invalid structure`);
+        return [];
       }
     } catch (err) {
       console.error(`Error fetching ${filter}:`, err);
@@ -122,17 +114,17 @@ export default function MainHome() {
   // Fetch new releases with pagination
   const fetchNewReleases = async () => {
     try {
+      // console.log("Fetching new releases...");
       let allData = [];
       let currentPage = 1;
       let totalPages = 1;
 
       while (currentPage <= totalPages) {
         const response = await fetch(`${NEW_RELEASE_URL}?api_key=${API_KEY}&status=active&page=${currentPage}`);
-        if (!response.ok) {
-          throw new Error(`New Releases API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`New Releases API error: ${response.status}`);
         const json = await response.json();
-        if (json.status === "success") {
+        // console.log(`New Releases page ${currentPage} response:`, json);
+        if (json.status === "success" && Array.isArray(json.data)) {
           allData = [
             ...allData,
             ...json.data.map((item, index) => ({
@@ -160,64 +152,102 @@ export default function MainHome() {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        // Check if user_id exists
         const storedId = await AsyncStorage.getItem("user_id");
         let isNewUser = false;
 
         if (!storedId) {
-          // Insert new user
           const res = await fetch(USER_API, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({}),
           });
-
-          if (!res.ok) {
-            throw new Error(`User insert API error: ${res.status}`);
-          }
-
+          if (!res.ok) throw new Error(`User insert API error: ${res.status}`);
           const contentType = res.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
+          if (!contentType || !contentType.includes("application/json"))
             throw new Error("User insert API response is not valid JSON");
-          }
-
           const json = await res.json();
           if (json.status === "success") {
             await AsyncStorage.setItem("user_id", String(json.user_id));
             isNewUser = true;
-          } else {
-            throw new Error(json.error || "Failed to create user");
-          }
+          } else throw new Error(json.error || "Failed to create user");
         }
 
-        // Fetch content data
-        const [banner, topShows, bingeWorthy, bollywoodBinge, dubbedInHindi, newReleases] = await Promise.all([
+        const [
+          banner,
+          newReleases,
+          topShows,
+          bingeWorthy,
+          bollywoodBinge,
+          dubbedInHindi,
+          allInOnePodcast,
+          catchmeTvOriginals,
+          dailyShows,
+          villainBabaShow,
+          no1VerticalShows,
+          satrakRaho,
+          topWebSeries,
+          topShortFilms,
+          bhojpuri,
+        ] = await Promise.all([
           fetchFilteredData("banner"),
+          fetchNewReleases(),
           fetchFilteredData("top_shows"),
           fetchFilteredData("binge_worthy"),
           fetchFilteredData("bollywood_binge"),
           fetchFilteredData("dubbed_in_hindi"),
-          fetchNewReleases(),
+          fetchFilteredData("all_in_one_podcast"),
+          fetchFilteredData("catchme_tv_originals"),
+          fetchFilteredData("daily_shows"), // Updated from daily_shops
+          fetchFilteredData("villain_baba_show"),
+          fetchFilteredData("no1_vertical_shows"),
+          fetchFilteredData("satrak_raho"),
+          fetchFilteredData("top_web_series"),
+          fetchFilteredData("top_short_films"),
+          fetchFilteredData("bhojpuri"),
         ]);
+
+        // console.log("Fetched data:", {
+        //   banner: banner.length,
+        //   newReleases: newReleases.length,
+        //   topShows: topShows.length,
+        //   bingeWorthy: bingeWorthy.length,
+        //   bollywoodBinge: bollywoodBinge.length,
+        //   dubbedInHindi: dubbedInHindi.length,
+        //   allInOnePodcast: allInOnePodcast.length,
+        //   catchmeTvOriginals: catchmeTvOriginals.length,
+        //   dailyShows: dailyShows.length, // Updated state name
+        //   villainBabaShow: villainBabaShow.length,
+        //   no1VerticalShows: no1VerticalShows.length,
+        //   satrakRaho: satrakRaho.length,
+        //   topWebSeries: topWebSeries.length,
+        //   topShortFilms: topShortFilms.length,
+        //   bhojpuri: bhojpuri.length,
+        // });
 
         setBannerData(banner.length > 0 ? banner : [
           { content_id: '1', title: 'Featured Content', thumbnail_url: DEFAULT_IMAGE },
           { content_id: '2', title: 'Popular Series', thumbnail_url: 'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg' },
-          { content_id: '3', title: 'New Movies', thumbnail_url: 'https://images.pexels.com/photos/7991328/pexels-photo-7991328.jpeg' }
+          { content_id: '3', title: 'New Movies', thumbnail_url: 'https://images.pexels.com/photos/7991328/pexels-photo-7991328.jpeg' },
         ]);
+        setNewReleaseData(newReleases);
         setTopShowsData(topShows.length > 0 ? topShows : [
           { content_id: '4', title: 'Action Series', language: 'English', industry: 'Hollywood', thumbnail_url: DEFAULT_IMAGE },
-          { content_id: '5', title: 'Comedy Show', language: 'Hindi', industry: 'Bollywood', thumbnail_url: 'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg' }
+          { content_id: '5', title: 'Comedy Show', language: 'Hindi', industry: 'Bollywood', thumbnail_url: 'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg' },
         ]);
         setBingeWorthyData(bingeWorthy);
         setBollywoodBingeData(bollywoodBinge);
         setDubbedInHindiData(dubbedInHindi);
-        setNewReleaseData(newReleases);
+        setAllInOnePodcastData(allInOnePodcast);
+        setCatchmeTvOriginalsData(catchmeTvOriginals);
+        setDailyShowsData(dailyShows); // Updated state name
+        setVillainBabaShowData(villainBabaShow);
+        setNo1VerticalShowsData(no1VerticalShows);
+        setSatrakRahoData(satrakRaho);
+        setTopWebSeriesData(topWebSeries);
+        setTopShortFilmsData(topShortFilms);
+        setBhojpuriData(bhojpuri);
 
-        // Redirect to Profile screen for new users
-        if (isNewUser) {
-          navigation.navigate("MainTabs", { screen: "Home", params: { screen: "Profile" } });
-        }
+        if (isNewUser) navigation.navigate("MainTabs", { screen: "Home", params: { screen: "Profile" } });
       } catch (err) {
         console.error("Fetch all data error:", err);
         setError(`Failed to load content: ${err.message}`);
@@ -248,9 +278,7 @@ export default function MainHome() {
 
   // Update current index on scroll
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
-      setCurrentBannerIndex(viewableItems[0].index);
-    }
+    if (viewableItems.length > 0) setCurrentBannerIndex(viewableItems[0].index);
   }).current;
 
   // getItemLayout for banner FlatList
@@ -262,62 +290,116 @@ export default function MainHome() {
 
   // getItemLayout for section FlatList
   const getSectionItemLayout = (data, index) => ({
-    length: 140 + 8, // card width (140) + margin (4 + 4)
-    offset: (140 + 8) * index,
+    length: 160 + 8, // Increased card width to 160 + margin (4 + 4)
+    offset: (160 + 8) * index,
     index,
   });
 
-  // Create listData dynamically
+  // Create listData in specified sequence
   const listData = [];
 
-  if (bannerData.length > 0) {
-    listData.push({ type: "slider", id: "slider" });
-  }
+  // Banner section (always first)
+  if (bannerData.length > 0) listData.push({ type: "slider", id: "slider" });
 
-  if (newReleaseData.length > 0) {
+  // Sections in the specified sequence
+  if (newReleaseData.length > 0)
     listData.push({
       type: "section",
       id: "newreleases",
       title: "🔥 New Releases",
       items: newReleaseData,
     });
-  }
-
-  if (topShowsData.length > 0) {
+  if (topShowsData.length > 0)
     listData.push({
       type: "section",
       id: "topshows",
       title: "⭐ Top Shows",
       items: topShowsData,
     });
-  }
-
-  if (bingeWorthyData.length > 0) {
+  if (bingeWorthyData.length > 0)
     listData.push({
       type: "section",
       id: "bingeworthy",
       title: "🍿 Binge Worthy",
       items: bingeWorthyData,
     });
-  }
-
-  if (bollywoodBingeData.length > 0) {
+  if (bollywoodBingeData.length > 0)
     listData.push({
       type: "section",
       id: "bollywoodbinge",
       title: "🎬 Bollywood Binge",
       items: bollywoodBingeData,
     });
-  }
-
-  if (dubbedInHindiData.length > 0) {
+  if (dubbedInHindiData.length > 0)
     listData.push({
       type: "section",
       id: "dubbedinhindi",
       title: "🗣️ Dubbed in Hindi",
       items: dubbedInHindiData,
     });
-  }
+  if (allInOnePodcastData.length > 0)
+    listData.push({
+      type: "section",
+      id: "allinonepodcast",
+      title: "🎙️ All In One Podcast",
+      items: allInOnePodcastData,
+    });
+  if (catchmeTvOriginalsData.length > 0)
+    listData.push({
+      type: "section",
+      id: "catchmetvoriginals",
+      title: "🎥 Catchme TV Originals",
+      items: catchmeTvOriginalsData,
+    });
+  if (dailyShowsData.length > 0) // Updated state name
+    listData.push({
+      type: "section",
+      id: "dailyshows",
+      title: "🛒 Daily Shows",
+      items: dailyShowsData,
+    });
+  if (villainBabaShowData.length > 0)
+    listData.push({
+      type: "section",
+      id: "villainbabashow",
+      title: "😈 The Villain Baba Show",
+      items: villainBabaShowData,
+    });
+  if (no1VerticalShowsData.length > 0)
+    listData.push({
+      type: "section",
+      id: "no1verticalshows",
+      title: "📱 No 1 Vertical Shows",
+      items: no1VerticalShowsData,
+    });
+  if (satrakRahoData.length > 0)
+    listData.push({
+      type: "section",
+      id: "satrakraho",
+      title: "🚨 Satrak Raho",
+      items: satrakRahoData,
+    });
+  if (topWebSeriesData.length > 0)
+    listData.push({
+      type: "section",
+      id: "topwebseries",
+      title: "📺 Top Web Series",
+      items: topWebSeriesData,
+    });
+  if (topShortFilmsData.length > 0)
+    listData.push({
+      type: "section",
+      id: "topshortfilms",
+      title: "🎥 Top Short Films",
+      items: topShortFilmsData,
+    });
+  if (bhojpuriData.length > 0)
+    listData.push({
+      type: "section",
+      id: "bhojpuri",
+      title: "🎶 Bhojpuri",
+      items: bhojpuriData,
+    });
 
   const renderSection = ({ item }) => {
     if (item.type === "slider") {
@@ -331,7 +413,26 @@ export default function MainHome() {
             keyExtractor={(it) => it.content_id.toString()}
             showsHorizontalScrollIndicator={false}
             renderItem={({ item: it }) => (
-              <View style={styles.bannerItemContainer}>
+              <TouchableOpacity
+                style={styles.bannerItemContainer}
+                activeOpacity={0.9}
+                onPress={() =>
+                  navigation.navigate("ViewDetails", {
+                    item: {
+                      id: it.content_id.toString(),
+                      title: it.title || "Unknown Title",
+                      author: it.industry || "Unknown",
+                      image: fixThumbnailUrl(it.thumbnail_url),
+                      description: it.description || "",
+                      main_category: it.main_category || "Unknown",
+                      category: it.category || "Unknown",
+                      language: it.language || "Unknown",
+                      preference: it.preference || "Unknown",
+                      plan_type: it.plan_type || "free",
+                    },
+                  })
+                }
+              >
                 <Image
                   source={{ uri: fixThumbnailUrl(it.thumbnail_url) }}
                   style={styles.sliderImage}
@@ -341,7 +442,7 @@ export default function MainHome() {
                   colors={["transparent", "rgba(0,0,0,0.4)", "rgba(0,0,0,0.8)"]}
                   style={styles.bannerGradient}
                 />
-              </View>
+              </TouchableOpacity>
             )}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
@@ -352,23 +453,17 @@ export default function MainHome() {
             removeClippedSubviews={true}
             decelerationRate="fast"
           />
-          
           <View style={styles.sliderOverlay}>
-            {/* <SubscribeShareButtons /> */}
+            <ShareButton />
           </View>
-          
           <View style={styles.paginationContainer}>
             {bannerData.map((_, index) => (
               <View
                 key={index}
-                style={[
-                  styles.paginationDot,
-                  { opacity: index === currentBannerIndex ? 1 : 0.4 }
-                ]}
+                style={[styles.paginationDot, { opacity: index === currentBannerIndex ? 1 : 0.4 }]}
               />
             ))}
           </View>
-          
           <TouchableOpacity
             style={[styles.navButton, styles.prevButton]}
             onPress={handlePrevBanner}
@@ -376,7 +471,6 @@ export default function MainHome() {
           >
             <Ionicons name="chevron-back" size={24} color="#fff" />
           </TouchableOpacity>
-          
           <TouchableOpacity
             style={[styles.navButton, styles.nextButton]}
             onPress={handleNextBanner}
@@ -411,7 +505,7 @@ export default function MainHome() {
                     category: it.category || "Unknown",
                     language: it.language || "Unknown",
                     preference: it.preference || "Unknown",
-                    plan_type: it.plan_type || "free", // Ensure plan_type is passed
+                    plan_type: it.plan_type || "free",
                   },
                 })
               }
@@ -423,7 +517,7 @@ export default function MainHome() {
                   resizeMode="cover"
                 />
                 <LinearGradient
-                  colors={["transparent", "rgba(0,0,0,0.6)"]}
+                  colors={["transparent", "rgba(0,0,0,0.7)"]}
                   style={styles.cardGradient}
                 />
                 <View style={styles.playButton}>
@@ -449,6 +543,9 @@ export default function MainHome() {
           windowSize={5}
           removeClippedSubviews={true}
           decelerationRate="fast"
+          ListEmptyComponent={() => (
+            <Text style={styles.emptyText}>No items available</Text>
+          )}
         />
       </View>
     );
@@ -477,9 +574,9 @@ export default function MainHome() {
           <Ionicons name="wifi-outline" size={60} color="#666" />
           <Text style={styles.errorTitle}>Connection Error</Text>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => navigation.replace("MainHome")} // Replace window.location.reload with navigation reset
+            onPress={() => navigation.replace("MainHome")}
           >
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
@@ -497,6 +594,11 @@ export default function MainHome() {
         renderItem={renderSection}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.mainContent}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No sections available</Text>
+          </View>
+        )}
       />
     </SafeAreaView>
   );
@@ -505,7 +607,7 @@ export default function MainHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212", // Darker modern background
+    backgroundColor: "#121212",
   },
   mainContent: {
     paddingBottom: 20,
@@ -562,8 +664,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-
-  // Banner Styles
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  emptyText: {
+    color: "#BBB",
+    fontSize: 16,
+    textAlign: "center",
+  },
   sliderContainer: {
     marginBottom: 28,
     position: "relative",
@@ -625,31 +736,11 @@ const styles = StyleSheet.create({
   },
   prevButton: { left: 16 },
   nextButton: { right: 16 },
-
-  // Button Styles
   buttonContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
-  },
-  subscribeButton: {
-    marginRight: 16,
-    borderRadius: 25,
-    overflow: "hidden",
-    elevation: 6,
-  },
-  subscribeGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  subscribeText: {
-    marginLeft: 8,
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 15,
   },
   shareButton: {
     borderRadius: 25,
@@ -660,8 +751,6 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     padding: 12,
   },
-
-  // Section Styles
   sectionContainer: {
     marginBottom: 28,
   },
@@ -675,20 +764,18 @@ const styles = StyleSheet.create({
   horizontalListContent: {
     paddingHorizontal: 16,
   },
-
-  // Card Styles
   card: {
     marginHorizontal: 6,
-    width: 140,
+    width: 140, // Reverted to original width
     borderRadius: 16,
     overflow: "hidden",
     backgroundColor: "#1E1E1E",
-    elevation: 3,
+    elevation: 3, // Reverted to original elevation
   },
   cardImageContainer: {
     position: "relative",
     width: "100%",
-    height: 200,
+    height: 200, // Reverted to original height
     borderRadius: 16,
     overflow: "hidden",
   },
@@ -727,6 +814,7 @@ const styles = StyleSheet.create({
   },
   cardMeta: {
     color: "#BBB",
-    fontSize: 11,
+    fontSize: 12,
+    backgroundColor: "transparent",
   },
 });
